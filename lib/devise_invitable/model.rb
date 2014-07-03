@@ -105,7 +105,7 @@ module Devise
       end
 
       # Reset invitation token and send invitation again
-      def invite!(invited_by = nil)
+      def invite!(invited_by = nil, request_params)
         was_invited = invited_to_sign_up?
 
         # Required to workaround confirmable model's confirmation_required? method
@@ -125,6 +125,22 @@ module Devise
 
         if save(:validate => false)
           self.invited_by.decrement_invitation_limit! if !was_invited and self.invited_by.present?
+
+          role = Role.by_id(request_params[:role]).first
+          if role.present?
+            case role.id
+            when Settings.role.mr
+              self.add_role :mr
+            when Settings.role.doctor
+              self.add_role :doctor
+            when Settings.role.nurse
+              self.add_role :nurse
+            when Settings.role.master
+              self.add_role :mr
+              self.add_role :master
+            end
+          end
+
           deliver_invitation unless @skip_invitation
         end
       end
@@ -174,7 +190,7 @@ module Devise
           !@skip_password && super
         end
 
-        
+
         # Checks if the invitation for the user is within the limit time.
         # We do this by calculating if the difference between today and the
         # invitation sent date does not exceed the invite for time configured.
@@ -224,7 +240,7 @@ module Devise
         # email is resent unless resend_invitation is set to false.
         # Attributes must contain the user's email, other attributes will be
         # set in the record
-        def _invite(attributes={}, invited_by=nil, &block)
+        def _invite(attributes={}, invited_by=nil, request_params, &block)
           invite_key_array = invite_key_fields
           attributes_hash = {}
           invite_key_array.each do |k,v|
@@ -248,12 +264,12 @@ module Devise
           end
 
           yield invitable if block_given?
-          mail = invitable.invite! if invitable.errors.empty?
+          mail = invitable.invite!(request_params) if invitable.errors.empty?
           [invitable, mail]
         end
 
-        def invite!(attributes={}, invited_by=nil, &block)
-          invitable, mail = _invite(attributes.with_indifferent_access, invited_by, &block)
+        def invite!(attributes={}, invited_by=nil, request_params, &block)
+          invitable, mail = _invite(attributes.with_indifferent_access, invited_by, request_params, &block)
           invitable
         end
 

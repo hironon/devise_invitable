@@ -224,7 +224,7 @@ class Devise::InvitationsController < DeviseController
         end
       end
 
-      if (params[:user][:password].empty? || params[:user][:password_confirmation].empty?) && params[:user][:password] != params[:user][:password_confirmation]
+      if (params[:user][:password].present? || params[:user][:password_confirmation].present?) && params[:user][:password] != params[:user][:password_confirmation]
         errors[:password_confirmation] = "パスワードと確認の入力が一致しません。"
       end
     end
